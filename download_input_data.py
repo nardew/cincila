@@ -12,8 +12,8 @@ from cryptoxlib.CryptoXLib import CryptoXLib
 STARTING_COIN = None
 
 # start and end date for the download
-START_DT = datetime.datetime(2021, 1, 9)
-END_DT = datetime.datetime(2021, 1, 10)
+START_DT = datetime.datetime(2021, 2, 5)
+END_DT = datetime.datetime(2021, 2, 6)
 
 async def run():
     cl = CryptoXLib.create_binance_client(os.environ['BINANCEAPIKEY'], os.environ['BINANCESECKEY'])

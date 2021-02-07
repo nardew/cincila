@@ -1,3 +1,4 @@
 cryptoxlib-aio
 pycoingecko
 matplotlib
+prettytable

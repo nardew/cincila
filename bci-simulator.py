@@ -58,6 +58,7 @@ if __name__ == "__main__":
         primary_candidate_size = args['primary_candidates'],
         secondary_candidate_size = args['secondary_candidates'],
         initial_funds = args['funds'],
+        initial_portfolio = args['initial_portfolio'],
         offset = args['offset'],
         bypass_validation = args['bypass_validation'],
         input_file_name = args['input_file'],

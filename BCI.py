@@ -1,6 +1,7 @@
 from typing import Dict
 import json
 import logging
+import prettytable as pt
 
 import matplotlib.pyplot as plt
 
@@ -165,9 +166,11 @@ class BCI(object):
         graph_x_dates = []
         for (i, date) in zip(range(len(self.dates)), self.dates):
             # if rebalancing period is other than 0, then rebalance every (rebalancing period) days. Otherwise rebalance
-            # on the first day of month. Do not rebalance on the very first day since the result would be equal to the initialized portfolio
+            # on the first day of month. Do not rebalance on the very first day since the result would be equal
+            # to the initialized portfolio (the exception is if initial portfolio is used as an input and there is just one date)
             [year, month, day] = date.split('-')
-            if i != 0 and ((self.rebalancing_period > 0 and i % self.rebalancing_period == 0) or (self.rebalancing_period == 0 and day == '01')):
+            if (i != 0 and ((self.rebalancing_period > 0 and i % self.rebalancing_period == 0) or (self.rebalancing_period == 0 and day == '01'))) or \
+                    (len(self.dates) == 1 and len(self.initial_portfolio) > 0):
                 LOG.info(f"\nRebalancing {date}")
                 if day == '01' and int(month) % 3 == 0:
                     graph_x_dates.append(date)
@@ -237,12 +240,15 @@ class BCI(object):
                 portfolio_sum = sum([qty * self.data[date][coin]['price'] for coin, qty in self.portfolio.items()])
                 new_portfolio = {coin[0]: (portfolio_sum * coin[1] / self.data[date][coin[0]]['price']) if self.data[date][coin[0]]['price'] != 0 else 0 for coin in perc_allocation}
 
-                LOG.info(f"\tNew portfolio allocation: {new_portfolio}")
-                new_portfolio_usd = {coin: qty * self.data[date][coin]['price'] for coin, qty in new_portfolio.items()}
-                LOG.info(f"\tNew portfolio USD allocation: {new_portfolio_usd}")
+                LOG.info(f"\tNew portfolio allocation:")
+                t = pt.PrettyTable(['Coin', 'Qty', 'Price [USD]', 'Value [USD]'], align = "r")
+                for coin, qty in new_portfolio.items():
+                    t.add_row([coin, qty, self.data[date][coin]['price'], qty * self.data[date][coin]['price']])
+                LOG.info(t)
                 LOG.info(f"\tPortfolio value: {portfolio_sum:,}")
 
                 # for each coin in the old and new portfolio calculate the amount to be bought/sold
+                LOG.info(f"\tPortfolio updates:")
                 diff = {}
                 for coin, qty in new_portfolio.items():
                     if coin in self.portfolio:
@@ -253,10 +259,11 @@ class BCI(object):
                     if coin not in new_portfolio:
                         diff[coin] = 0 - self.portfolio[coin]
 
-                LOG.info(f"\tPortfolio updates: {diff}")
-
-                diff_usd = {coin: self.data[date][coin]['price'] * qty for coin, qty in diff.items()}
-                LOG.info(f"\tPortfolio USD updates: {diff_usd}")
+                t = pt.PrettyTable(['Coin', '+/-', 'Qty', 'Price [USD]', 'Value [USD]', 'Remaining Qty'], align = "r")
+                for coin, qty in diff.items():
+                    t.add_row([coin, '+' if qty >= 0 else '-', abs(qty), self.data[date][coin]['price'], qty * self.data[date][coin]['price'],
+                               new_portfolio[coin] if coin in new_portfolio else 0])
+                LOG.info(t)
 
                 # calculate fee for the bought/sold coins
                 diff_usd = {coin: abs(qty * self.data[date][coin]['price']) * self.fee for coin, qty in diff.items()}
@@ -304,8 +311,6 @@ class BCI(object):
         #for i, x in zip(range(150), ranking):
         #    print(f'{i} {x}')
         ranking = ranking[self.offset:self.offset + self.index_size]
-
-
 
         LOG.debug(f"\tTop {self.index_size} assets:")
         LOG.debug("\n".join(map(lambda x: f"\t\t{x}", ranking)))
